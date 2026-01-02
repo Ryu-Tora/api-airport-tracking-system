@@ -1,3 +1,4 @@
+from django.db import transaction
 from rest_framework import serializers
 
 from tracking_app.models import (
@@ -5,35 +6,43 @@ from tracking_app.models import (
     Route,
     Crew,
     AirplaneType,
-    Airplane, Flight, Order, Ticket
+    Airplane,
+    Flight,
+    Order,
+    Ticket
 )
 
 
 class AirportSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Airport
         fields = ("id", "name", "closest_big_city")
 
 
 class RouteSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Route
         fields = ("id", "source", "destination", "distance")
 
 
 class CrewSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Crew
         fields = ("id", "first_name", "last_name")
 
 
 class AirplaneTypeSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = AirplaneType
         fields = ("id", "name")
 
 
 class AirplaneSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Airplane
         fields = (
@@ -46,6 +55,7 @@ class AirplaneSerializer(serializers.ModelSerializer):
 
 
 class FlightSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Flight
         fields = (
@@ -59,12 +69,31 @@ class FlightSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Order
         fields = ("id", "created_at", "user")
 
+    def create(self, validated_data):
+        with transaction.atomic():
+            ticket_data = validated_data.pop("ticket_data")
+            order = Order.objects.create(**validated_data)
+            for ticket in ticket_data:
+                Ticket.objects.create(**ticket)
+            return order
+
 
 class TicketSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        data = super(TicketSerializer, self).validate(attrs=attrs)
+        Ticket.validate_ticket(
+            attrs["row"],
+            attrs["seat"],
+            attrs["flight"].airplane,
+            ValueError
+        )
+        return data
+
     class Meta:
         model = Ticket
         fields = ("id", "row", "seat", "flight", "order")
