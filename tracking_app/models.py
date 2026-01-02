@@ -31,9 +31,9 @@ class Route(models.Model):
                 name="unique_route"
             ),
             models.CheckConstraint(
-                check=~Q(source=F("destination")),
+                condition=~Q(source=models.F("destination")),
                 name="source_not_equal_destination"
-            )
+            ),
         ]
 
     def __str__(self):
@@ -92,7 +92,7 @@ class Flight(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=Q(arrival_time__gt=F("departure_time")),
+                condition=Q(arrival_time__gt=F("departure_time")),
                 name="arrival_after_departure"
             )
         ]
