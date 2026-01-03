@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework import routers
 
 from tracking_app.views import (
@@ -23,5 +23,5 @@ router.register("flights", FlightViewSet)
 router.register("orders", OrderViewSet)
 
 urlpatterns = [
-    path("", router.urls),
+    path("", include(router.urls)),
 ]
