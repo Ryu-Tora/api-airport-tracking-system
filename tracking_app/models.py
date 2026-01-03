@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.db.models import Q, F
 from rest_framework.exceptions import ValidationError
@@ -25,6 +26,7 @@ class Route(models.Model):
     distance = models.PositiveIntegerField()
 
     class Meta:
+        verbose_name_plural = "routs"
         constraints = [
             models.UniqueConstraint(
                 fields=["source", "destination"],
@@ -36,11 +38,14 @@ class Route(models.Model):
             ),
         ]
 
+    def clean(self):
+        if self.source == self.destination:
+            raise ValidationError(
+                "Source and destination airports must be different"
+            )
+
     def __str__(self):
         return f"Flight from {self.source.name} to {self.destination.name}"
-
-    class Meta:
-        unique_together = (("source", "destination"),)
 
 
 class Crew(models.Model):
@@ -53,6 +58,9 @@ class Crew(models.Model):
 
 class AirplaneType(models.Model):
     name = models.CharField(max_length=255, unique=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Airplane(models.Model):
@@ -105,7 +113,11 @@ class Flight(models.Model):
 
 class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
-    user = User
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders"
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -124,6 +136,14 @@ class Ticket(models.Model):
         on_delete=models.CASCADE,
         related_name="tickets"
     )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["flight", "row", "seat"],
+                name="unique_seat_per_flight"
+            )
+        ]
 
     @staticmethod
     def validate_ticket(row, seat, airplane, error_to_raise):
